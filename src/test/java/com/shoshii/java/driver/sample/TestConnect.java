@@ -8,10 +8,8 @@ import com.datastax.oss.driver.api.core.cql.*;
 
 import java.time.Duration;
 import java.net.InetSocketAddress;
-import java.io.*;
 import java.util.*;
 
-import com.datastax.oss.driver.internal.core.auth.PlainTextAuthProvider;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.testng.annotations.BeforeClass;

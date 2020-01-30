@@ -1,6 +1,6 @@
 VERSION=v1
 PROJECT_ID?=shoshii
-PROJECT=shoshii0102.synology.me:4443/${PROJECT_ID}
+PROJECT=${DOCKER_REPO}/${PROJECT_ID}
 REPONAME=datastax-java-driver-sample
 
 all: build
