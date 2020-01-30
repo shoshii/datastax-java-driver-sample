@@ -7,16 +7,17 @@ import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.*;
 
 import java.time.Duration;
-import java.util.MissingResourceException;
 import java.net.InetSocketAddress;
+import java.io.*;
+import java.util.*;
 
+import com.datastax.oss.driver.internal.core.auth.PlainTextAuthProvider;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.AfterClass;
 
 public class TestConnect {
-    private static String contact_point;
     private static CqlSession session;
 
     @BeforeClass(alwaysRun = true)
@@ -30,7 +31,9 @@ public class TestConnect {
 
     @AfterClass
     public void tearDown() {
-        session.close();
+        if (session != null) {
+            session.close();
+        }
     }
 
     @Test
@@ -39,27 +42,32 @@ public class TestConnect {
     }
 
     @Test
-    public void testSelect() {
-        ResultSet rs = session.execute("select release_version from system.local");
-        //  Extract the first row (which is the only one in this case).
-        Row row = rs.one();
+    public void testSelect() throws InterruptedException {
+        for (int i = 0; i < 1000; i++) {
+            ResultSet rs = session.execute("select release_version from system.local");
+            //  Extract the first row (which is the only one in this case).
+            Row row = rs.one();
 
-        // Extract the value of the first (and only) column from the row.
-        Assert.assertFalse(row == null);
-        String releaseVersion = row.getString("release_version");
-        System.out.printf("Cassandra version is: %s%n", releaseVersion);
+            // Extract the value of the first (and only) column from the row.
+            Assert.assertFalse(row == null);
+            String releaseVersion = row.getString("release_version");
+            System.out.printf("%s Cassandra version is: %s%n", i, releaseVersion);
+            Thread.sleep(1000);
+        }
     }
 
     private CqlSession connect() {
-        try {
-            contact_point = System.getProperty("contact_point", "192.168.100.202");
-            System.out.println("contact_point:" + contact_point);
-        } catch (MissingResourceException e) {
-            e.printStackTrace();
+        // 接続先
+        String[] contact_points = {"cassandra-1", "cassandra-2", "cassandra-3"};
+        //String[] contact_points = {"127.0.0.1", "127.0.0.2", "127.0.0.3"};
+
+        List<InetSocketAddress> socketAddresses = new ArrayList<>();
+        for (String contact_point : contact_points) {
+            socketAddresses.add(new InetSocketAddress(contact_point, 9042));
         }
-        if (contact_point.isEmpty()) {
-            contact_point = "192.168.100.202";
-        }
+
+        // 設定ファイル読み込み
+        // https://docs.datastax.com/en/developer/java-driver/4.0/manual/core/configuration/reference/
         DriverConfigLoader loader =
                 DriverConfigLoader.programmaticBuilder()
                     .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(30))
@@ -67,7 +75,8 @@ public class TestConnect {
                     .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(30))
                     .endProfile()
                     .build();
-        session = CqlSession.builder().addContactPoint(new InetSocketAddress(contact_point, 9042))
+        session = CqlSession.builder().addContactPoints(socketAddresses)
+                .withAuthCredentials("cassandra", "cassandra")
                 .withLocalDatacenter("datacenter1")
                 .withKeyspace(CqlIdentifier.fromCql("system"))
                 .withConfigLoader(loader)

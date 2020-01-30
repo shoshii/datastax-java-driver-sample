@@ -12,9 +12,9 @@ container:
 build: container
 
 push: build
-	docker -- push ${PROJECT}/${REPONAME}:${VERSION}
+	docker -- push --network cassandra ${PROJECT}/${REPONAME}:${VERSION}
 
 test: test
-	docker run -it ${PROJECT}/${REPONAME}:${VERSION} /bin/bash
+	docker run -it --network cassandra ${PROJECT}/${REPONAME}:${VERSION} /bin/bash
 
 .PHONY: all build test push
