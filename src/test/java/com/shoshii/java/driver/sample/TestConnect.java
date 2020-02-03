@@ -6,6 +6,7 @@ import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.*;
 
+import java.io.File;
 import java.time.Duration;
 import java.net.InetSocketAddress;
 import java.util.*;
@@ -63,18 +64,22 @@ public class TestConnect {
         for (String contact_point : contact_points) {
             socketAddresses.add(new InetSocketAddress(contact_point, 9042));
         }
+        String user = System.getProperty("user");
+        if (user.isEmpty()) {
+            user = "cassandra";
+        }
+        String password = System.getProperty("password");
+        if (password.isEmpty()) {
+            password = "cassandra";
+        }
 
         // 設定ファイル読み込み
         // https://docs.datastax.com/en/developer/java-driver/4.0/manual/core/configuration/reference/
         DriverConfigLoader loader =
-                DriverConfigLoader.programmaticBuilder()
-                    .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(30))
-                    .startProfile("slow")
-                    .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(30))
-                    .endProfile()
-                    .build();
+                DriverConfigLoader.fromFile(new File("/etc/datastax-driver/conf/application.conf"));
+
         session = CqlSession.builder().addContactPoints(socketAddresses)
-                .withAuthCredentials("cassandra", "cassandra")
+                .withAuthCredentials(user, password)
                 .withLocalDatacenter("datacenter1")
                 .withKeyspace(CqlIdentifier.fromCql("system"))
                 .withConfigLoader(loader)
